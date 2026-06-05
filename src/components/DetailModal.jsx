@@ -13,6 +13,7 @@ export default function DetailModal({ jersey, onClose }) {
   const [imageSrcs, setImageSrcs] = useState([]);
   const [uploadedMap, setUploadedMap] = useState({});
   const [uploading, setUploading] = useState({});
+  const [dragOver, setDragOver] = useState(null); // which slot index is being dragged over
   const fileRefs = useRef([]);
 
   const images = getJerseyImages(jersey);
@@ -244,8 +245,19 @@ export default function DetailModal({ jersey, onClose }) {
                     {images.map((img, i) => (
                       <div key={i} className="space-y-1.5">
                         <div
-                          className="aspect-square rounded-lg overflow-hidden bg-zinc-800 border border-white/[0.06] cursor-pointer relative group"
+                          className={`aspect-square rounded-lg overflow-hidden bg-zinc-800 border cursor-pointer relative group transition-all
+                            ${dragOver === i ? "border-[var(--color-jersey-gold)] ring-2 ring-[var(--color-jersey-gold)]/30 scale-105" : "border-white/[0.06]"}`}
                           onClick={() => fileRefs.current[i]?.click()}
+                          onDragOver={(e) => { e.preventDefault(); setDragOver(i); }}
+                          onDragLeave={() => setDragOver(null)}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            setDragOver(null);
+                            const file = e.dataTransfer.files[0];
+                            if (file && file.type.startsWith("image/")) {
+                              handleFileSelect(i, file);
+                            }
+                          }}
                         >
                           <img
                             src={imageSrcs[i] || getPlaceholder(img.label, i)}
@@ -287,7 +299,7 @@ export default function DetailModal({ jersey, onClose }) {
                 )}
                 {editMode && (
                   <p className="text-[10px] text-zinc-600">
-                    Click to upload. Photos go to cloud storage (prod) or local browser (dev).
+                    Click or drag & drop photos. Cloud storage (prod) / local browser (dev).
                   </p>
                 )}
               </div>
