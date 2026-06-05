@@ -11,7 +11,7 @@ export default function JerseyCard({ jersey, onClick }) {
 
   useEffect(() => {
     let cancelled = false;
-    getStoredImages(jersey.id).then((stored) => {
+    getStoredImages(jersey.id, jersey.imageFolder).then((stored) => {
       if (cancelled) return;
       const uploaded = stored.find((s) => s.index === 0);
       if (uploaded) {

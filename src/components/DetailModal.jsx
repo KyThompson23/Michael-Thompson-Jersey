@@ -29,7 +29,7 @@ export default function DetailModal({ jersey, onClose, isAdmin = false }) {
       });
 
       // Check storage for uploaded images
-      const stored = await getStoredImages(jersey.id);
+      const stored = await getStoredImages(jersey.id, jersey.imageFolder);
       const map = {};
       const srcs = [...local];
       stored.forEach(({ index, url }) => {
@@ -70,7 +70,7 @@ export default function DetailModal({ jersey, onClose, isAdmin = false }) {
     if (!file) return;
     setUploading((prev) => ({ ...prev, [index]: true }));
     try {
-      const url = await uploadImage(jersey.id, index, file);
+      const url = await uploadImage(jersey.id, index, file, jersey.imageFolder);
       setImageSrcs((prev) => { const n = [...prev]; n[index] = url; return n; });
       setUploadedMap((prev) => ({ ...prev, [index]: true }));
     } catch (err) {
@@ -80,7 +80,7 @@ export default function DetailModal({ jersey, onClose, isAdmin = false }) {
   };
 
   const handleClearAll = async () => {
-    await deleteAllImages(jersey.id);
+    await deleteAllImages(jersey.id, jersey.imageFolder);
     const srcs = [];
     for (let i = 0; i < maxImages; i++) {
       srcs[i] = images[i]?.src || null;
@@ -90,7 +90,7 @@ export default function DetailModal({ jersey, onClose, isAdmin = false }) {
   };
 
   const handleDeleteSingle = async (index) => {
-    await deleteStoredImage(jersey.id, index);
+    await deleteStoredImage(jersey.id, index, jersey.imageFolder);
     setImageSrcs((prev) => {
       const n = [...prev];
       n[index] = images[index]?.src || getPlaceholder(images[index]?.label || "", index);

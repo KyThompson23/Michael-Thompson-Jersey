@@ -5,7 +5,7 @@ export function getJerseyImages(jersey) {
   const { imageFolder, imageCount = maxImages } = jersey;
   const count = Math.min(imageCount, maxImages);
   return Array.from({ length: count }, (_, i) => ({
-    src: `/images/jerseys/${imageFolder}/${i + 1}.jpg`, // local fallback path
+    src: `${import.meta.env.BASE_URL}images/jerseys/${imageFolder}/${i + 1}.jpg`,
     label: imageLabels[i],
     index: i,
   }));

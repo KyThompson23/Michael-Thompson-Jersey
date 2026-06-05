@@ -1,7 +1,10 @@
-// Unified storage: Vercel Blob API in production, IndexedDB in development
-import { saveImage, deleteImage as dbDelete, getImage as dbGet, hasUploadedImages as dbHas, fileToBase64 } from "./db";
+// Unified storage: Vercel Blob (vercel.app), filesystem (localhost), static (github.io)
+import { fileToBase64 } from "./db";
 
-const isProd = typeof window !== "undefined" && !window.location.hostname.includes("localhost") && !window.location.hostname.includes("127.0.0.1");
+const hostname = typeof window !== "undefined" ? window.location.hostname : "";
+const isLocal = hostname.includes("localhost") || hostname.includes("127.0.0.1");
+const isVercel = hostname.includes("vercel.app");
+const isGHpages = hostname.includes("github.io");
 
 async function apiPost(path, body) {
   const res = await fetch(path, {
@@ -12,38 +15,59 @@ async function apiPost(path, body) {
   return res.json();
 }
 
-// Upload image: file → API (prod) or IndexedDB (dev)
-export async function uploadImage(jerseyId, index, file) {
-  if (isProd) {
+// Upload image
+export async function uploadImage(jerseyId, index, file, imageFolder) {
+  if (isLocal) {
+    const base64 = await fileToBase64(file);
+    const data = await apiPost("/api/upload-local", {
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageFolder, index, data: base64 }),
+    });
+    return data.url;
+  }
+  if (isVercel) {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("jerseyId", String(jerseyId));
     formData.append("index", String(index));
     const data = await apiPost("/api/upload", { body: formData });
     return data.url;
-  } else {
-    const base64 = await fileToBase64(file);
-    await saveImage(jerseyId, index, base64);
-    return base64;
   }
+  // GitHub Pages: no upload API
+  return null;
 }
 
 // Delete single image
-export async function deleteStoredImage(jerseyId, index) {
-  if (isProd) {
+export async function deleteStoredImage(jerseyId, index, imageFolder) {
+  if (isLocal) {
+    await apiPost("/api/delete-image-local", {
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageFolder, index }),
+    });
+    return;
+  }
+  if (isVercel) {
     await apiPost("/api/delete-image", {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ jerseyId: String(jerseyId), index }),
     });
-  } else {
-    await dbDelete(jerseyId, index);
   }
 }
 
 // Delete all images for a jersey
-export async function deleteAllImages(jerseyId) {
-  if (isProd) {
-    // Delete 5 possible slots
+export async function deleteAllImages(jerseyId, imageFolder) {
+  if (isLocal) {
+    await Promise.all(
+      [0, 1, 2, 3, 4].map((i) =>
+        apiPost("/api/delete-image-local", {
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageFolder, index: i }),
+        }).catch(() => {})
+      )
+    );
+    return;
+  }
+  if (isVercel) {
     await Promise.all(
       [0, 1, 2, 3, 4].map((i) =>
         apiPost("/api/delete-image", {
@@ -52,37 +76,33 @@ export async function deleteAllImages(jerseyId) {
         }).catch(() => {})
       )
     );
-  } else {
-    const { deleteImages } = await import("./db");
-    await deleteImages(jerseyId);
   }
 }
 
 // Get all image URLs for a jersey: returns [{index, url}, ...]
-export async function getStoredImages(jerseyId) {
-  if (isProd) {
+export async function getStoredImages(jerseyId, imageFolder) {
+  if (isLocal) {
+    try {
+      const data = await fetch(`/api/images-local?imageFolder=${imageFolder}`).then((r) => r.json());
+      return data.images || [];
+    } catch {
+      return [];
+    }
+  }
+  if (isVercel) {
     try {
       const data = await fetch(`/api/images?jerseyId=${jerseyId}`).then((r) => r.json());
       return data.images || [];
     } catch {
       return [];
     }
-  } else {
-    const results = [];
-    for (let i = 0; i < 5; i++) {
-      const base64 = await dbGet(jerseyId, i);
-      if (base64) results.push({ index: i, url: base64 });
-    }
-    return results;
   }
+  // GitHub Pages: images are static files, no stored uploads
+  return [];
 }
 
 // Check if any uploaded images exist
-export async function hasUploadedImages(jerseyId) {
-  if (isProd) {
-    const images = await getStoredImages(jerseyId);
-    return images.length > 0;
-  } else {
-    return dbHas(jerseyId);
-  }
+export async function hasUploadedImages(jerseyId, imageFolder) {
+  const images = await getStoredImages(jerseyId, imageFolder);
+  return images.length > 0;
 }
