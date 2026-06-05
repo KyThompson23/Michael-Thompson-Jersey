@@ -6,7 +6,7 @@ import { imageLabelsEn, maxImages } from "../data/teams";
 
 const WECHAT_ID = "YourWeChatID";
 
-export default function DetailModal({ jersey, onClose }) {
+export default function DetailModal({ jersey, onClose, isAdmin = false }) {
   const [copied, setCopied] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
   const [editMode, setEditMode] = useState(false);
@@ -221,7 +221,8 @@ export default function DetailModal({ jersey, onClose }) {
 
               <p className="text-sm text-zinc-400 leading-relaxed">{jersey.description}</p>
 
-              {/* Edit Photos */}
+              {/* Edit Photos — admin only */}
+              {isAdmin && (
               <div className="border border-white/[0.06] rounded-xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <button
@@ -303,6 +304,8 @@ export default function DetailModal({ jersey, onClose }) {
                   </p>
                 )}
               </div>
+              )}
+
             </div>
 
             {/* Price & CTA */}

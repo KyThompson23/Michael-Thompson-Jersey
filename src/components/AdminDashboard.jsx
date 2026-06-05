@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { teams, versions } from "../data/teams";
-import { Plus, Shirt, Ruler, Tag, Hash, Lock, LogIn, X, FolderOpen } from "lucide-react";
+import { Plus, Shirt, Ruler, Tag, Hash, Lock, LogIn, LogOut, X, FolderOpen } from "lucide-react";
 
-export default function AdminDashboard({ onAddJersey }) {
+export default function AdminDashboard({ onAddJersey, isAdmin, onAuthChange }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [authenticated, setAuthenticated] = useState(false);
+  const authenticated = isAdmin;
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [form, setForm] = useState({
@@ -23,7 +23,7 @@ export default function AdminDashboard({ onAddJersey }) {
 
   const handleLogin = () => {
     if (password === "123456") {
-      setAuthenticated(true);
+      onAuthChange(true);
       setError("");
     } else {
       setError("Incorrect password");
@@ -76,10 +76,13 @@ export default function AdminDashboard({ onAddJersey }) {
       {/* Toggle Button */}
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full bg-zinc-800 border border-white/[0.08] flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 hover:scale-110 transition-all duration-300 shadow-lg"
-        title="Admin"
+        className={`fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full border border-white/[0.08] flex items-center justify-center hover:scale-110 transition-all duration-300 shadow-lg
+          ${authenticated
+            ? "bg-[var(--color-jersey-gold)]/20 text-[var(--color-jersey-gold)] border-[var(--color-jersey-gold)]/30"
+            : "bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700"}`}
+        title={authenticated ? "Admin (已解锁)" : "Admin"}
       >
-        <Lock size={18} />
+        {authenticated ? <LogOut size={18} /> : <Lock size={18} />}
       </button>
 
       {/* Admin Panel */}
@@ -88,7 +91,6 @@ export default function AdminDashboard({ onAddJersey }) {
           className="fixed inset-0 z-[200] flex items-center justify-center p-4"
           onClick={() => {
             setIsOpen(false);
-            setAuthenticated(false);
             setError("");
             setPassword("");
           }}
@@ -103,11 +105,18 @@ export default function AdminDashboard({ onAddJersey }) {
               <div className="flex items-center gap-2 text-white">
                 <Shirt size={20} className="text-[var(--color-jersey-gold)]" />
                 <span className="font-semibold">Admin Dashboard</span>
+                {authenticated && (
+                  <button
+                    onClick={() => onAuthChange(false)}
+                    className="text-[10px] px-2 py-0.5 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+                  >
+                    退出登录
+                  </button>
+                )}
               </div>
               <button
                 onClick={() => {
                   setIsOpen(false);
-                  setAuthenticated(false);
                   setError("");
                   setPassword("");
                 }}

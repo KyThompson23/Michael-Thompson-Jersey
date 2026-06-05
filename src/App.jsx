@@ -12,6 +12,7 @@ export default function App() {
   const [selectedVersions, setSelectedVersions] = useState([]);
   const [selectedJersey, setSelectedJersey] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const handleTeamToggle = useCallback((team) => {
     setSelectedTeams((prev) =>
@@ -46,7 +47,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white flex">
-      {/* Sidebar */}
       <Sidebar
         selectedTeams={selectedTeams}
         selectedVersions={selectedVersions}
@@ -57,13 +57,10 @@ export default function App() {
         onClose={() => setSidebarOpen(false)}
       />
 
-      {/* Main Content */}
       <main className="flex-1 min-h-screen flex flex-col">
-        {/* Header */}
         <header className="sticky top-0 z-30 bg-zinc-950/80 backdrop-blur-xl border-b border-white/[0.06]">
           <div className="flex items-center justify-between px-5 py-4">
             <div className="flex items-center gap-3">
-              {/* Mobile menu toggle */}
               <button
                 onClick={() => setSidebarOpen(true)}
                 className="lg:hidden text-zinc-400 hover:text-white transition-colors"
@@ -75,9 +72,7 @@ export default function App() {
                   <Shirt size={16} className="text-white" />
                 </div>
                 <div>
-                  <h1 className="text-sm font-bold text-white tracking-tight">
-                    NBA Jersey Gallery
-                  </h1>
+                  <h1 className="text-sm font-bold text-white tracking-tight">NBA Jersey Gallery</h1>
                   <p className="text-[10px] text-zinc-500 -mt-0.5">球衣买手店</p>
                 </div>
               </div>
@@ -97,22 +92,24 @@ export default function App() {
           </div>
         </header>
 
-        {/* Gallery Area */}
         <div className="flex-1 p-5 lg:p-8">
           <Gallery jerseys={filteredJerseys} onJerseyClick={setSelectedJersey} />
         </div>
       </main>
 
-      {/* Detail Modal */}
       {selectedJersey && (
         <DetailModal
           jersey={selectedJersey}
           onClose={() => setSelectedJersey(null)}
+          isAdmin={isAdmin}
         />
       )}
 
-      {/* Admin Dashboard */}
-      <AdminDashboard onAddJersey={handleAddJersey} />
+      <AdminDashboard
+        onAddJersey={handleAddJersey}
+        isAdmin={isAdmin}
+        onAuthChange={setIsAdmin}
+      />
     </div>
   );
 }
