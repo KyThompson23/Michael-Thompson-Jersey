@@ -1,0 +1,10 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "functions": {
+    "api/upload.js": { "memory": 512, "maxDuration": 30 },
+    "api/delete-image.js": { "memory": 256, "maxDuration": 10 },
+    "api/images.js": { "memory": 256, "maxDuration": 10 }
+  }
+}
