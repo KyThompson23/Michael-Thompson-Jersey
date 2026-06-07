@@ -66,8 +66,9 @@ function localUploadPlugin() {
         if (!imageFolder) { res.statusCode = 400; res.end(); return }
         const dir = path.join(publicDir, 'images', 'jerseys', imageFolder)
         const images = []
+        const MAX = 5;
         if (fs.existsSync(dir)) {
-          for (let i = 0; i < 5; i++) {
+          for (let i = 0; i < MAX; i++) {
             for (const ext of ['.jpg', '.png', '.webp']) {
               const filePath = path.join(dir, `${i + 1}${ext}`)
               if (fs.existsSync(filePath)) {

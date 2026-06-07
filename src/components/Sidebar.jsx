@@ -14,7 +14,7 @@ export default function Sidebar({ selectedTeams, selectedVersions, onTeamToggle,
         className={`
           fixed lg:sticky top-0 left-0 z-50 lg:z-0
           h-screen w-72 lg:w-64
-          bg-zinc-900/95 backdrop-blur-xl border-r border-white/[0.06]
+          bg-zinc-950 border-r border-white/[0.06]
           flex flex-col
           transform transition-transform duration-300 ease-out
           ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}

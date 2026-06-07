@@ -1,5 +1,6 @@
 // Unified storage: Vercel Blob (vercel.app), filesystem (localhost), static (github.io)
 import { fileToBase64 } from "./db";
+import { maxImages } from "../data/teams";
 
 const hostname = typeof window !== "undefined" ? window.location.hostname : "";
 const isLocal = hostname.includes("localhost") || hostname.includes("127.0.0.1");
@@ -58,7 +59,7 @@ export async function deleteStoredImage(jerseyId, index, imageFolder) {
 export async function deleteAllImages(jerseyId, imageFolder) {
   if (isLocal) {
     await Promise.all(
-      [0, 1, 2, 3, 4].map((i) =>
+      Array.from({ length: maxImages }, (_, i) => i).map((i) =>
         apiPost("/api/delete-image-local", {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ imageFolder, index: i }),
@@ -69,7 +70,7 @@ export async function deleteAllImages(jerseyId, imageFolder) {
   }
   if (isVercel) {
     await Promise.all(
-      [0, 1, 2, 3, 4].map((i) =>
+      Array.from({ length: maxImages }, (_, i) => i).map((i) =>
         apiPost("/api/delete-image", {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ jerseyId: String(jerseyId), index: i }),

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { teams, versions } from "../data/teams";
+import { teams, versions, minImages, maxImages } from "../data/teams";
 import { Plus, Shirt, Ruler, Tag, Hash, Lock, LogIn, LogOut, X, FolderOpen } from "lucide-react";
 
 export default function AdminDashboard({ onAddJersey, isAdmin, onAuthChange }) {
@@ -17,7 +17,7 @@ export default function AdminDashboard({ onAddJersey, isAdmin, onAuthChange }) {
     officialSize: "XS",
     year: "",
     imageFolder: "",
-    imageCount: 5,
+    imageCount: minImages,
     description: "",
   });
 
@@ -62,7 +62,7 @@ export default function AdminDashboard({ onAddJersey, isAdmin, onAuthChange }) {
       officialSize: "XS",
       year: "",
       imageFolder: "",
-      imageCount: 5,
+      imageCount: minImages,
       description: "",
     });
   };
@@ -292,21 +292,21 @@ export default function AdminDashboard({ onAddJersey, isAdmin, onAuthChange }) {
                     </div>
                     <div className="col-span-2">
                       <label className="flex items-center gap-1.5 text-xs text-zinc-400 mb-1.5">
-                        Photos (1-5)
+                        Photos (2-{maxImages})
                       </label>
                       <select
                         value={form.imageCount}
                         onChange={(e) => updateField("imageCount", e.target.value)}
                         className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-sm focus:outline-none focus:border-[var(--color-jersey-gold)] transition-colors appearance-none cursor-pointer"
                       >
-                        {[1, 2, 3, 4, 5].map((n) => (
+                        {[2, 3, 4, 5].map((n) => (
                           <option key={n} value={n}>{n} 张</option>
                         ))}
                       </select>
                     </div>
                   </div>
                   <p className="text-[10px] text-zinc-600 -mt-2">
-                    Put 1.jpg~5.jpg in public/images/jerseys/your-folder-name/
+                    Put 1.jpg~{form.imageCount}.jpg in public/images/jerseys/your-folder-name/
                   </p>
 
                   {/* Description */}

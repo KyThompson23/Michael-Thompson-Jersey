@@ -1,34 +1,33 @@
 import { useState, useEffect, useRef } from "react";
-import { X, Copy, Check, Ruler, Shirt, Calendar, ChevronLeft, ChevronRight, Upload, Camera, Trash2 } from "lucide-react";
+import { X, Copy, Check, Ruler, Shirt, Calendar, ChevronLeft, ChevronRight, Upload, Camera, Trash2, ImagePlus } from "lucide-react";
 import { getJerseyImages, getPlaceholder } from "../lib/images";
 import { getStoredImages, uploadImage, deleteStoredImage, deleteAllImages } from "../lib/storage";
-import { imageLabelsEn, maxImages } from "../data/teams";
+import { imageLabelsEn, minImages, maxImages } from "../data/teams";
 
 const WECHAT_ID = "YourWeChatID";
 
 export default function DetailModal({ jersey, onClose, isAdmin = false }) {
   const [copied, setCopied] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
-  const [editMode, setEditMode] = useState(false);
   const [imageSrcs, setImageSrcs] = useState([]);
   const [uploadedMap, setUploadedMap] = useState({});
   const [uploading, setUploading] = useState({});
-  const [dragOver, setDragOver] = useState(null); // which slot index is being dragged over
+  const [dragOver, setDragOver] = useState(null);
+  const [mainDragOver, setMainDragOver] = useState(false);
+  const [slotCount, setSlotCount] = useState(jersey.imageCount);
   const fileRefs = useRef([]);
 
-  const images = getJerseyImages(jersey);
+  const images = getJerseyImages({ ...jersey, imageCount: slotCount });
 
-  // Load images: Blob API (prod) or IndexedDB (dev), fallback to local files
+  // Load images: uploaded first, fallback to local files
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      // Start with local file paths
       const local = Array.from({ length: maxImages }, (_, i) => {
         const img = images[i];
         return img ? img.src : null;
       });
 
-      // Check storage for uploaded images
       const stored = await getStoredImages(jersey.id, jersey.imageFolder);
       const map = {};
       const srcs = [...local];
@@ -44,7 +43,7 @@ export default function DetailModal({ jersey, onClose, isAdmin = false }) {
     }
     load();
     return () => { cancelled = true; };
-  }, [jersey.id]);
+  }, [jersey.id, slotCount]);
 
   const activeSrc = imageSrcs[activeImage] || getPlaceholder(images[activeImage]?.label || "", activeImage);
 
@@ -63,8 +62,14 @@ export default function DetailModal({ jersey, onClose, isAdmin = false }) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const goPrev = () => setActiveImage((i) => (i === 0 ? maxImages - 1 : i - 1));
-  const goNext = () => setActiveImage((i) => (i === maxImages - 1 ? 0 : i + 1));
+  const goPrev = () => setActiveImage((i) => (i === 0 ? slotCount - 1 : i - 1));
+  const goNext = () => setActiveImage((i) => (i === slotCount - 1 ? 0 : i + 1));
+
+  const addSlot = () => {
+    if (slotCount < maxImages) {
+      setSlotCount(slotCount + 1);
+    }
+  };
 
   const handleFileSelect = async (index, file) => {
     if (!file) return;
@@ -87,6 +92,7 @@ export default function DetailModal({ jersey, onClose, isAdmin = false }) {
     }
     setImageSrcs(srcs.map((src, i) => src || getPlaceholder(images[i]?.label || "", i)));
     setUploadedMap({});
+    setSlotCount(minImages);
   };
 
   const handleDeleteSingle = async (index) => {
@@ -127,7 +133,20 @@ export default function DetailModal({ jersey, onClose, isAdmin = false }) {
         <div className="flex flex-col md:flex-row overflow-y-auto flex-1">
           {/* Image Area */}
           <div className="md:w-1/2 bg-zinc-950 flex flex-col">
-            <div className="relative aspect-square overflow-hidden">
+            <div
+              className={`relative aspect-square overflow-hidden ${mainDragOver ? "ring-2 ring-[var(--color-jersey-gold)] ring-inset" : ""}`}
+              onDragOver={(e) => { if (isAdmin) { e.preventDefault(); setMainDragOver(true); } }}
+              onDragLeave={() => setMainDragOver(false)}
+              onDrop={(e) => {
+                if (!isAdmin) return;
+                e.preventDefault();
+                setMainDragOver(false);
+                const file = e.dataTransfer.files[0];
+                if (file && file.type.startsWith("image/")) {
+                  handleFileSelect(activeImage, file);
+                }
+              }}
+            >
               <img
                 src={activeSrc}
                 alt={`${jersey.title}`}
@@ -136,20 +155,50 @@ export default function DetailModal({ jersey, onClose, isAdmin = false }) {
                   e.target.src = getPlaceholder(images[activeImage]?.label || "", activeImage);
                 }}
               />
-              <button onClick={goPrev} className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white/70 hover:text-white hover:bg-black/70 transition-all">
+              <button onClick={goPrev} className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white/70 hover:text-white hover:bg-black/70 transition-all z-10">
                 <ChevronLeft size={18} />
               </button>
-              <button onClick={goNext} className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white/70 hover:text-white hover:bg-black/70 transition-all">
+              <button onClick={goNext} className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white/70 hover:text-white hover:bg-black/70 transition-all z-10">
                 <ChevronRight size={18} />
               </button>
-              <div className="absolute bottom-3 left-3">
+              <div className="absolute bottom-3 left-3 z-10">
                 <span className="px-2.5 py-1 rounded-md text-xs font-medium bg-black/50 backdrop-blur-md text-white/80">
                   {images[activeImage]?.label || ""} / {imageLabelsEn[activeImage] || ""}
                 </span>
               </div>
               {uploadedMap[activeImage] && (
-                <div className="absolute bottom-3 right-3">
-                  <span className="px-2 py-1 rounded-md text-[10px] font-medium bg-green-500/30 text-green-300 backdrop-blur-md">已上传</span>
+                <button
+                  onClick={(e) => { e.stopPropagation(); fileRefs.current[activeImage]?.click(); }}
+                  className="absolute bottom-3 right-3 z-10 flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium bg-green-500/30 text-green-300 backdrop-blur-md hover:bg-green-500/50 transition-colors"
+                  title="点击替换"
+                >
+                  已上传
+                </button>
+              )}
+              {!uploadedMap[activeImage] && isAdmin && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); fileRefs.current[activeImage]?.click(); }}
+                  className="absolute bottom-3 right-3 z-10 flex items-center gap-1 px-3 py-1.5 rounded-full bg-[var(--color-jersey-gold)] text-zinc-900 text-xs font-semibold hover:brightness-110 transition-all shadow-lg"
+                >
+                  <Upload size={12} />
+                  上传
+                </button>
+              )}
+
+              {/* Drag overlay */}
+              {isAdmin && mainDragOver && (
+                <div className="absolute inset-0 z-20 flex items-center justify-center bg-[var(--color-jersey-gold)]/10 border-2 border-[var(--color-jersey-gold)] border-dashed">
+                  <div className="flex flex-col items-center gap-2">
+                    <ImagePlus size={32} className="text-[var(--color-jersey-gold)]" />
+                    <span className="text-xs text-[var(--color-jersey-gold)] font-medium">松手上传</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Uploading spinner */}
+              {uploading[activeImage] && (
+                <div className="absolute inset-0 z-20 bg-black/70 flex items-center justify-center">
+                  <div className="w-8 h-8 border-2 border-[var(--color-jersey-gold)]/30 border-t-[var(--color-jersey-gold)] rounded-full animate-spin" />
                 </div>
               )}
             </div>
@@ -157,23 +206,74 @@ export default function DetailModal({ jersey, onClose, isAdmin = false }) {
             {/* Thumbnails */}
             <div className="flex gap-2 p-3 overflow-x-auto">
               {images.map((img, i) => (
-                <button
-                  key={i}
-                  onClick={() => setActiveImage(i)}
-                  className={`relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all group
-                    ${i === activeImage ? "border-[var(--color-jersey-gold)]" : "border-transparent opacity-50 hover:opacity-80"}`}
-                >
-                  <img
-                    src={imageSrcs[i] || getPlaceholder(img.label, i)}
-                    alt=""
-                    className="w-full h-full object-cover"
-                    onError={(e) => { e.target.src = getPlaceholder(img.label, i); }}
+                <div key={i} className="relative flex-shrink-0 group/thumb">
+                  <button
+                    onClick={() => setActiveImage(i)}
+                    className={`relative w-16 h-16 rounded-lg overflow-hidden border-2 transition-all
+                      ${i === activeImage ? "border-[var(--color-jersey-gold)]" : "border-transparent opacity-50 hover:opacity-80"}`}
+                  >
+                    <img
+                      src={imageSrcs[i] || getPlaceholder(img.label, i)}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      onError={(e) => { e.target.src = getPlaceholder(img.label, i); }}
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover/thumb:bg-black/40 transition-colors flex items-end justify-center pb-1">
+                      <span className="text-[9px] text-white/0 group-hover/thumb:text-white/90 transition-opacity font-medium">{img.label}</span>
+                    </div>
+                  </button>
+
+                  {/* Admin: upload icon on each thumbnail */}
+                  {isAdmin && (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          fileRefs.current[i]?.click();
+                        }}
+                        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[var(--color-jersey-gold)] text-zinc-900 flex items-center justify-center
+                          opacity-0 group-hover/thumb:opacity-100 transition-all hover:scale-110 z-10 shadow-md"
+                        title={`替换 ${img.label}`}
+                      >
+                        <Upload size={10} />
+                      </button>
+                      {uploadedMap[i] && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteSingle(i); }}
+                          className="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-red-500/90 text-white flex items-center justify-center
+                            opacity-0 group-hover/thumb:opacity-100 transition-all hover:scale-110 z-10 shadow-md"
+                          title="删除此图"
+                        >
+                          <X size={10} />
+                        </button>
+                      )}
+                    </>
+                  )}
+
+                  <input
+                    ref={(el) => (fileRefs.current[i] = el)}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      handleFileSelect(i, e.target.files[0]);
+                      e.target.value = "";
+                    }}
                   />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-end justify-center pb-1">
-                    <span className="text-[9px] text-white/0 group-hover:text-white/90 transition-opacity font-medium">{img.label}</span>
-                  </div>
-                </button>
+                </div>
               ))}
+
+              {/* Add more photo slot button */}
+              {isAdmin && slotCount < maxImages && (
+                <button
+                  onClick={addSlot}
+                  className="relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 border-dashed border-zinc-700 hover:border-[var(--color-jersey-gold)] transition-all flex flex-col items-center justify-center gap-1 text-zinc-500 hover:text-[var(--color-jersey-gold)] group/add"
+                  title="添加新图位"
+                >
+                  <ImagePlus size={18} className="transition-transform group-hover/add:scale-110" />
+                  <span className="text-[9px] font-medium">添加</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -197,7 +297,7 @@ export default function DetailModal({ jersey, onClose, isAdmin = false }) {
                   {jersey.version === "AU" ? "Authentic 球员版" : "Swingman 球迷版"}
                 </span>
                 <span className="text-xs text-zinc-600">{images.length} photos</span>
-                {hasUploads && <span className="text-xs text-green-400">({Object.keys(uploadedMap).length} cloud)</span>}
+                {hasUploads && <span className="text-xs text-green-400">({Object.keys(uploadedMap).length} 已上传)</span>}
               </div>
 
               <div className="bg-gradient-to-br from-[var(--color-jersey-gold)]/10 to-transparent border border-[var(--color-jersey-gold)]/20 rounded-xl p-4">
@@ -221,88 +321,86 @@ export default function DetailModal({ jersey, onClose, isAdmin = false }) {
 
               <p className="text-sm text-zinc-400 leading-relaxed">{jersey.description}</p>
 
-              {/* Edit Photos — admin only */}
+              {/* Admin edit panel — always visible when admin */}
               {isAdmin && (
-              <div className="border border-white/[0.06] rounded-xl p-4 space-y-3">
+              <div className="border border-[var(--color-jersey-gold)]/20 rounded-xl p-4 space-y-3 bg-[var(--color-jersey-gold)]/5">
                 <div className="flex items-center justify-between">
-                  <button
-                    onClick={() => setEditMode(!editMode)}
-                    className={`flex items-center gap-1.5 text-xs font-medium transition-colors
-                      ${editMode ? "text-[var(--color-jersey-gold)]" : "text-zinc-500 hover:text-white"}`}
-                  >
+                  <div className="flex items-center gap-2 text-[var(--color-jersey-gold)]">
                     <Camera size={14} />
-                    {editMode ? "收起" : "Edit Photos"}
-                  </button>
+                    <span className="text-xs font-semibold">管理图片</span>
+                    <span className="text-[10px] text-zinc-500">({Object.keys(uploadedMap).length}/{slotCount} 张)</span>
+                  </div>
                   {hasUploads && (
                     <button onClick={handleClearAll} className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 transition-colors">
                       <Trash2 size={12} />
-                      Clear all
+                      清空全部
                     </button>
                   )}
                 </div>
 
-                {editMode && (
-                  <div className="grid grid-cols-5 gap-2">
-                    {images.map((img, i) => (
-                      <div key={i} className="space-y-1.5">
-                        <div
-                          className={`aspect-square rounded-lg overflow-hidden bg-zinc-800 border cursor-pointer relative group transition-all
-                            ${dragOver === i ? "border-[var(--color-jersey-gold)] ring-2 ring-[var(--color-jersey-gold)]/30 scale-105" : "border-white/[0.06]"}`}
-                          onClick={() => fileRefs.current[i]?.click()}
-                          onDragOver={(e) => { e.preventDefault(); setDragOver(i); }}
-                          onDragLeave={() => setDragOver(null)}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            setDragOver(null);
-                            const file = e.dataTransfer.files[0];
-                            if (file && file.type.startsWith("image/")) {
-                              handleFileSelect(i, file);
-                            }
-                          }}
-                        >
-                          <img
-                            src={imageSrcs[i] || getPlaceholder(img.label, i)}
-                            alt={img.label}
-                            className="w-full h-full object-cover"
-                          />
-                          {uploadedMap[i] && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDeleteSingle(i); }}
-                              className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-500/80 hover:bg-red-500 flex items-center justify-center text-white transition-all z-10"
-                              title="Delete"
-                            >
-                              <X size={11} />
-                            </button>
-                          )}
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition-colors flex items-center justify-center">
-                            <Upload size={16} className="text-white/0 group-hover:text-white/80 transition-all" />
-                          </div>
-                          {uploading[i] && (
-                            <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
-                              <div className="w-4 h-4 border-2 border-[var(--color-jersey-gold)]/30 border-t-[var(--color-jersey-gold)] rounded-full animate-spin" />
-                            </div>
-                          )}
-                        </div>
-                        <p className="text-[9px] text-zinc-500 text-center leading-tight">{img.label}</p>
-                        <input
-                          ref={(el) => (fileRefs.current[i] = el)}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            handleFileSelect(i, e.target.files[0]);
-                            e.target.value = "";
-                          }}
+                {/* Upload grid */}
+                <div className="grid grid-cols-5 gap-2">
+                  {images.map((img, i) => (
+                    <div key={i} className="space-y-1.5">
+                      <div
+                        className={`aspect-square rounded-lg overflow-hidden bg-zinc-800 border cursor-pointer relative group transition-all
+                          ${dragOver === i ? "border-[var(--color-jersey-gold)] ring-2 ring-[var(--color-jersey-gold)]/30 scale-105" : "border-white/[0.06]"}`}
+                        onClick={() => fileRefs.current[i]?.click()}
+                        onDragOver={(e) => { e.preventDefault(); setDragOver(i); }}
+                        onDragLeave={() => setDragOver(null)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setDragOver(null);
+                          const file = e.dataTransfer.files[0];
+                          if (file && file.type.startsWith("image/")) {
+                            handleFileSelect(i, file);
+                          }
+                        }}
+                      >
+                        <img
+                          src={imageSrcs[i] || getPlaceholder(img.label, i)}
+                          alt={img.label}
+                          className="w-full h-full object-cover"
                         />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition-colors flex items-center justify-center">
+                          <Upload size={16} className="text-white/0 group-hover:text-white/80 transition-all" />
+                        </div>
+                        {uploading[i] && (
+                          <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                            <div className="w-4 h-4 border-2 border-[var(--color-jersey-gold)]/30 border-t-[var(--color-jersey-gold)] rounded-full animate-spin" />
+                          </div>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                )}
-                {editMode && (
-                  <p className="text-[10px] text-zinc-600">
-                    Click or drag & drop photos. Cloud storage (prod) / local browser (dev).
-                  </p>
-                )}
+                      <div className="flex items-center justify-between px-0.5">
+                        <p className="text-[9px] text-zinc-500 leading-tight">{img.label}</p>
+                        {uploadedMap[i] && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteSingle(i); }}
+                            className="text-red-400/60 hover:text-red-400 transition-colors"
+                            title="删除"
+                          >
+                            <X size={10} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Add slot button in grid */}
+                  {slotCount < maxImages && (
+                    <button
+                      onClick={addSlot}
+                      className="aspect-square rounded-lg border-2 border-dashed border-zinc-700 hover:border-[var(--color-jersey-gold)] transition-all flex flex-col items-center justify-center gap-1 text-zinc-500 hover:text-[var(--color-jersey-gold)] group/add"
+                      title="添加新图位"
+                    >
+                      <ImagePlus size={20} className="transition-transform group-hover/add:scale-110" />
+                      <span className="text-[9px]">加图位</span>
+                    </button>
+                  )}
+                </div>
+                <p className="text-[10px] text-zinc-500">
+                  💡 大图区可直接拖拽替换，缩略图悬停有上传按钮。至少需传 {minImages} 张，最多 {maxImages} 张。
+                </p>
               </div>
               )}
 

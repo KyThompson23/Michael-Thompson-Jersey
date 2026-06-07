@@ -58,7 +58,7 @@ export default function App() {
       />
 
       <main className="flex-1 min-h-screen flex flex-col">
-        <header className="sticky top-0 z-30 bg-zinc-950/80 backdrop-blur-xl border-b border-white/[0.06]">
+        <header className="sticky top-0 z-30 bg-zinc-950/95 border-b border-white/[0.06]">
           <div className="flex items-center justify-between px-5 py-4">
             <div className="flex items-center gap-3">
               <button
