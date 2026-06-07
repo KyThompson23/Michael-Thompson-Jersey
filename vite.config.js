@@ -26,7 +26,7 @@ function localUploadPlugin() {
             const buffer = Buffer.from(data.replace(/^data:image\/\w+;base64,/, ''), 'base64')
             const dir = path.join(publicDir, 'images', 'jerseys', imageFolder)
             fs.mkdirSync(dir, { recursive: true })
-            const ext = data.startsWith('data:image/png') ? '.png' : '.jpg'
+            const ext = '.jpg'
             fs.writeFileSync(path.join(dir, `${index + 1}${ext}`), buffer)
             res.writeHead(200, { 'Content-Type': 'application/json' })
             res.end(JSON.stringify({ ok: true, url: `/images/jerseys/${imageFolder}/${index + 1}${ext}` }))
