@@ -26,15 +26,7 @@ export async function uploadImage(jerseyId, index, file, imageFolder) {
     });
     return data.url;
   }
-  if (isVercel) {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("jerseyId", String(jerseyId));
-    formData.append("index", String(index));
-    const data = await apiPost("/api/upload", { body: formData });
-    return data.url;
-  }
-  // GitHub Pages: no upload API
+  // Vercel & GitHub Pages: no upload API (use static files)
   return null;
 }
 
@@ -47,12 +39,7 @@ export async function deleteStoredImage(jerseyId, index, imageFolder) {
     });
     return;
   }
-  if (isVercel) {
-    await apiPost("/api/delete-image", {
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ jerseyId: String(jerseyId), index }),
-    });
-  }
+  // Vercel & GitHub Pages: skip (static files)
 }
 
 // Delete all images for a jersey
@@ -68,16 +55,7 @@ export async function deleteAllImages(jerseyId, imageFolder) {
     );
     return;
   }
-  if (isVercel) {
-    await Promise.all(
-      Array.from({ length: maxImages }, (_, i) => i).map((i) =>
-        apiPost("/api/delete-image", {
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ jerseyId: String(jerseyId), index: i }),
-        }).catch(() => {})
-      )
-    );
-  }
+  // Vercel & GitHub Pages: skip (static files)
 }
 
 // Get all image URLs for a jersey: returns [{index, url}, ...]
@@ -90,15 +68,7 @@ export async function getStoredImages(jerseyId, imageFolder) {
       return [];
     }
   }
-  if (isVercel) {
-    try {
-      const data = await fetch(`/api/images?jerseyId=${jerseyId}`).then((r) => r.json());
-      return data.images || [];
-    } catch {
-      return [];
-    }
-  }
-  // GitHub Pages: images are static files, no stored uploads
+  // Vercel / GitHub Pages: use static files (no Blob call — avoids timeout)
   return [];
 }
 
