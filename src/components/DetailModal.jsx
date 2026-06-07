@@ -15,6 +15,7 @@ export default function DetailModal({ jersey, onClose, isAdmin = false }) {
   const [dragOver, setDragOver] = useState(null);
   const [mainDragOver, setMainDragOver] = useState(false);
   const [slotCount, setSlotCount] = useState(jersey.imageCount);
+  const [fullscreen, setFullscreen] = useState(false);
   const fileRefs = useRef([]);
 
   const images = getJerseyImages({ ...jersey, imageCount: slotCount });
@@ -150,7 +151,8 @@ export default function DetailModal({ jersey, onClose, isAdmin = false }) {
               <img
                 src={activeSrc}
                 alt={`${jersey.title}`}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover cursor-zoom-in"
+                onClick={() => setFullscreen(true)}
                 onError={(e) => {
                   e.target.src = getPlaceholder(images[activeImage]?.label || "", activeImage);
                 }}
@@ -426,6 +428,84 @@ export default function DetailModal({ jersey, onClose, isAdmin = false }) {
           </div>
         </div>
       </div>
+
+      {/* Fullscreen image viewer */}
+      {fullscreen && (
+        <div
+          className="fixed inset-0 z-[300] bg-black/95 flex items-center justify-center"
+          onClick={() => setFullscreen(false)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setFullscreen(false);
+            if (e.key === "ArrowLeft") goPrev();
+            if (e.key === "ArrowRight") goNext();
+          }}
+          tabIndex={0}
+          ref={(el) => el?.focus()}
+        >
+          {/* Close */}
+          <button
+            onClick={() => setFullscreen(false)}
+            className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/20 transition-colors"
+          >
+            <X size={20} />
+          </button>
+
+          {/* Prev */}
+          <button
+            onClick={(e) => { e.stopPropagation(); goPrev(); }}
+            className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-colors"
+          >
+            <ChevronLeft size={24} />
+          </button>
+
+          {/* Next */}
+          <button
+            onClick={(e) => { e.stopPropagation(); goNext(); }}
+            className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white/70 hover:text-white hover:bg-white/20 transition-colors"
+          >
+            <ChevronRight size={24} />
+          </button>
+
+          {/* Image */}
+          <img
+            src={activeSrc}
+            alt={jersey.title}
+            className="max-w-full max-h-full object-contain p-8"
+            onClick={(e) => e.stopPropagation()}
+            onError={(e) => {
+              e.target.src = getPlaceholder(images[activeImage]?.label || "", activeImage);
+            }}
+          />
+
+          {/* Info bar */}
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4">
+            <span className="px-4 py-2 rounded-full bg-white/10 text-white/80 text-sm backdrop-blur-sm">
+              {images[activeImage]?.label || ""} / {imageLabelsEn[activeImage] || ""}
+            </span>
+            <span className="text-white/40 text-sm">
+              {activeImage + 1} / {slotCount}
+            </span>
+          </div>
+
+          {/* Thumbnail strip */}
+          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex gap-2">
+            {images.map((img, i) => (
+              <button
+                key={i}
+                onClick={(e) => { e.stopPropagation(); setActiveImage(i); }}
+                className={`w-12 h-12 rounded-lg overflow-hidden border-2 transition-all
+                  ${i === activeImage ? "border-[var(--color-jersey-gold)]" : "border-white/20 opacity-50 hover:opacity-80"}`}
+              >
+                <img
+                  src={imageSrcs[i] || getPlaceholder(img.label, i)}
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
